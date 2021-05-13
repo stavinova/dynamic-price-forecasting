@@ -82,18 +82,18 @@ class PricePrediction:
         model_mv_lstm = MV_LSTM_predictor(df, self.__mv_lstm_params['predict ahead'], self.__mv_lstm_params['fare'], self.__mv_lstm_params['predictant'],
                                     self.__mv_lstm_params['predictor'], self.__lstm_params['number of filters'], self.__lstm_params['batch size'], 
                                     self.__lstm_params['number of epochs'])
-        pred_b, true_b = model_b.pred, model_b.true
-        pred_a, true_a = model_arima.pred, model_arima.true
-        pred_ax, true_ax = model_arimax.pred, model_arimax.true
-        pred_l, true_l = model_lstm.pred, model_lstm.true
-        pred_ml, true_ml = model_mv_lstm.pred, model_mv_lstm.true
-        return pred_b, true_b, pred_a, true_a, pred_ax, true_ax, pred_l, true_l, pred_ml, true_ml
+        rmse_b, mape_b = model_b.rmse, model_b.mape
+        rmse_a, mape_a = model_arima.rmse, model_arima.mape
+        rmse_ax, mape_ax = model_arimax.rmse, model_arimax.mape
+        rmse_l, mape_l = model_lstm.rmse, model_lstm.mape
+        rmse_ml, mape_ml = model_mv_lstm.rmse, model_mv_lstm.mape
+        return rmse_b, mape_b, rmse_a, mape_a, rmse_ax, mape_ax, rmse_l, mape_l, rmse_ml, mape_ml
 
 data = pd.read_csv("data/thegurus-opendata-renfe-trips.csv")
 PP = PricePrediction()
-PP.set_baseline_model(predict_ahead = 4, fare = 'Flexible', predictant = 'mean')
-PP.set_ARIMA_model(predict_ahead = 4, fare = 'Flexible', predictant = 'mean', p = 1, d = 0, q = 1)
-PP.set_ARIMAX_model(predict_ahead = 4, fare = 'Flexible', predictant = 'mean', predictor = 'ave', p = 1, d = 0, q = 1)
-PP.set_LSTM_model(predict_ahead = 4, fare = 'Flexible', predictant = 'mean', NFILTERS = 4, BATCH_SIZE = 1, NB_EPOCHS = 100)
-PP.set_MV_LSTM_model(predict_ahead = 4, fare = 'Flexible', predictant = 'mean', predictor = 'ave',NFILTERS = 4, BATCH_SIZE = 1, NB_EPOCHS = 100)
-pred_b, true_b, pred_a, true_a, pred_ax, true_ax, pred_l, true_l, pred_ml, true_ml = PP.infer(df = data)
+PP.set_baseline_model(predict_ahead = 4, fare = 'Promo', predictant = 'trains')
+PP.set_ARIMA_model(predict_ahead = 4, fare = 'Promo', predictant = 'trains', p = 3, d = 0, q = 1)
+PP.set_ARIMAX_model(predict_ahead = 4, fare = 'Promo', predictant = 'trains', predictor = 'renfe', p = 3, d = 0, q = 1)
+PP.set_LSTM_model(predict_ahead = 4, fare = 'Promo', predictant = 'trains', NFILTERS = 4, BATCH_SIZE = 1, NB_EPOCHS = 100)
+PP.set_MV_LSTM_model(predict_ahead = 4, fare = 'Promo', predictant = 'trains', predictor = 'renfe' ,NFILTERS = 4, BATCH_SIZE = 1, NB_EPOCHS = 100)
+rmse_b, mape_b, rmse_a, mape_a, rmse_ax, mape_ax, rmse_l, mape_l, rmse_ml, mape_ml = PP.infer(df = data)

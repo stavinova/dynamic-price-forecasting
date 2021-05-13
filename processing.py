@@ -57,7 +57,7 @@ class DataProcessing:
         for predictor in [self.ave, self.renfe, self.tren, self.ave_bar, self.renfe_bar, self.tren_bar]:
             max_price, max_trains = 0, 0
             ind_price, ind_trains = 0, 0
-            for i in range(15):
+            for i in range(9):
                 if i != 0:
                     coef_p, p_p = spearmanr(predictor[16-i:-4-i], self.price)
                     coef_t, p_t = spearmanr(predictor[16-i:-4-i], self.trains)

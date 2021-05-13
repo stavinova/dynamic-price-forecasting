@@ -19,7 +19,7 @@ class Baseline_predictor(DataProcessing):
         self.predict_ahead = predict_ahead
         self.predictant = predictant
         self.train, self.test = self.train_test_split()
-        self.pred, self.true = self.model()
+        self.rmse, self.mape = self.model()
         
     def train_test_split(self):
         sdate = date(2019, 4, 14)
@@ -50,7 +50,7 @@ class Baseline_predictor(DataProcessing):
         return (rmse, MAPE)
 
 class ARIMA_predictor(DataProcessing):
-    def __init__(self, df, predict_ahead, fare, predictant, p, q, d):
+    def __init__(self, df, predict_ahead, fare, predictant, p, d, q):
         DataProcessing.__init__(self, df, fare)
         self.predict_ahead = predict_ahead
         self.predictant = predictant
@@ -58,7 +58,7 @@ class ARIMA_predictor(DataProcessing):
         self.p = p
         self.q = q
         self.d = d
-        self.pred, self.true = self.model()
+        self.rmse, self.mape = self.model()
         
     def train_test_split(self):
         sdate = date(2019, 4, 14)
@@ -91,7 +91,7 @@ class ARIMA_predictor(DataProcessing):
         return (rmse, MAPE)
     
 class ARIMAX_predictor(DataProcessing):
-    def __init__(self, df, predict_ahead, fare, predictant, p, q, d, exogs):
+    def __init__(self, df, predict_ahead, fare, predictant, predictor, p, d, q):
         DataProcessing.__init__(self, df, fare)
         self.predict_ahead = predict_ahead
         self.predictant = predictant
@@ -99,8 +99,8 @@ class ARIMAX_predictor(DataProcessing):
         self.p = p
         self.q = q
         self.d = d
-        self.exogs = exogs
-        self.pred, self.true = self.model()
+        self.exogs = predictor
+        self.rmse, self.mape = self.model()
         
     def train_test_split(self):
         sdate = date(2019, 4, 14)
@@ -128,7 +128,7 @@ class ARIMAX_predictor(DataProcessing):
         ex1 = [x for x in self.train[self.exogs].values]
         ex = np.transpose(np.array([ex1]))
         predictions = list()
-        for t in range(int(math.trunc(len(self.test) / self.predict_ahead))):
+        for t in range(int(math.trunc(len(self.test)/self.predict_ahead))):
             model = sm.tsa.statespace.SARIMAX(history, exog=ex, order=(self.p,self.d,self.q), seasonal_order=(0,0,0,0))
             model_fit = model.fit()
             exog1 = []
@@ -136,17 +136,17 @@ class ARIMAX_predictor(DataProcessing):
                 exog1.append(self.test[self.exogs].values[t+i])
             exog = np.transpose(np.array([exog1]))
             output = model_fit.predict(start=len(self.train)+self.predict_ahead*t, end=len(self.train)+3+self.predict_ahead*t, exog=exog)
-        for i in range(self.predict_ahead):
-            predictions.append(output[i])
-            obs = self.test[self.predictant].values[t+i]
-            history.append(obs)
-        ex = np.vstack((ex, exog))
+            for i in range(self.predict_ahead):
+                predictions.append(output[i])
+                obs = self.test[self.predictant].values[t+i]
+                history.append(obs)
+            ex = np.vstack((ex, exog))
         rmse = math.sqrt(mean_squared_error(self.test[self.predictant][:4*int(math.trunc(len(self.test) / self.predict_ahead))], predictions))
         MAPE = mean_absolute_percentage_error(self.test[self.predictant][:4*int(math.trunc(len(self.test) / self.predict_ahead))], predictions)
         return (rmse, MAPE)
     
 class LSTM_predictor(DataProcessing):
-    def __init__(self, df, predict_ahead, fare, predictant, NFILTERS, NB_EPOCHS, BATCH_SIZE):
+    def __init__(self, df, predict_ahead, fare, predictant, NFILTERS, BATCH_SIZE, NB_EPOCHS):
         DataProcessing.__init__(self, df, fare)
         self.predict_ahead = predict_ahead
         self.predictant = predictant
@@ -154,7 +154,7 @@ class LSTM_predictor(DataProcessing):
         self.NFILTERS = NFILTERS
         self.NB_EPOCHS = NB_EPOCHS
         self.BATCH_SIZE = BATCH_SIZE
-        self.pred, self.true = self.model()
+        self.rmse, self.mape = self.model()
         
     def train_test_split(self):
         sdate = date(2019, 4, 14)
@@ -172,11 +172,11 @@ class LSTM_predictor(DataProcessing):
         df_val = df_val.astype('float32')
         scaler = MinMaxScaler(feature_range=(0, 1))
         df_val = scaler.fit_transform(df_val)
-        df_train, df_test = df[0:size], df[size:len(df_val)]
+        df_train, df_test = df_val[0:size], df_val[size:len(df_val)]
         np.random.seed(7)
         return (df_train, df_test, scaler)
     
-    def create_dataset_test(dataset, look_back=1):
+    def create_dataset_test(self, dataset, look_back=1):
         dataX, dataY = [], []
         for i in np.arange(0, len(dataset)-look_back-1, 4):
             a = dataset[i:(i+look_back), 0]
@@ -185,7 +185,7 @@ class LSTM_predictor(DataProcessing):
             dataY.append(b)
         return np.array(dataX), np.array(dataY)
     
-    def create_dataset_train(dataset, look_back=1):
+    def create_dataset_train(self, dataset, look_back):
         dataX, dataY = [], []
         for i in range(len(dataset)-look_back-1):
             a = dataset[i:(i+look_back), 0]
@@ -222,18 +222,18 @@ class LSTM_predictor(DataProcessing):
         return (rmse, MAPE)
     
 class MV_LSTM_predictor(DataProcessing):
-    def __init__(self, df, predict_ahead, fare, predictant, NFILTERS, NB_EPOCHS, BATCH_SIZE, exogs):
+    def __init__(self, df, predict_ahead, fare, predictant, predictor, NFILTERS, BATCH_SIZE, NB_EPOCHS):
         DataProcessing.__init__(self, df, fare)
         self.predict_ahead = predict_ahead
         self.predictant = predictant
+        self.exogs = predictor
         self.train, self.test, self.scaler, self.size, self.df_val = self.train_test_split()
         self.NFILTERS = NFILTERS
         self.NB_EPOCHS = NB_EPOCHS
         self.BATCH_SIZE = BATCH_SIZE
-        self.exogs = exogs
-        self.pred, self.true = self.model()
+        self.rmse, self.mape = self.model()
         
-    def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
+    def series_to_supervised(self, data, n_in=1, n_out=1, dropnan=True):
         n_vars = 1 if type(data) is list else data.shape[1]
         df = pd.DataFrame(data)
         cols, names = list(), list()
@@ -269,7 +269,7 @@ class MV_LSTM_predictor(DataProcessing):
                  'renfe_bar': self.renfe_bar[16-self.cor_trains[4]:-4-self.cor_trains[4]]}
         df = pd.DataFrame(d)
         df = df.set_index('date')
-        df = df[self.exogs]
+        df = df[[self.predictant, self.exogs]]
         size = int(len(df) * 0.8)
         df_val = df.values
         df_val = df_val.astype('float32')
